@@ -1,0 +1,67 @@
+name: Ponder Source Grouptabs web build
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    if: github.repository == 'pondersource/grouptabs'
+    runs-on: ubuntu-latest
+    env:
+      REACT_APP_BACKEND_URL: ${{ vars.GROUPTABS_SYNC_URL }}
+      PUBLIC_URL: /
+      HUSKY: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: yarn
+      - run: yarn install --frozen-lockfile
+      - run: yarn test --watchAll=false --runInBand
+      - name: Build Grouptabs
+        run: |
+          if [[ -n "$REACT_APP_BACKEND_URL" || "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
+            node -e '
+              const url = new URL(process.env.REACT_APP_BACKEND_URL);
+              if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash || process.env.REACT_APP_BACKEND_URL.endsWith("/")) {
+                throw new Error("GROUPTABS_SYNC_URL must be an HTTPS CouchDB gateway base URL with no trailing slash, credentials, query, or fragment.");
+              }
+            '
+          fi
+          export REACT_APP_GT_VERSION="$GITHUB_SHA"
+          yarn build
+          git rev-parse HEAD > build/revision.txt
+      - uses: actions/upload-artifact@v4
+        if: env.REACT_APP_BACKEND_URL != ''
+        with:
+          name: grouptabs-web
+          path: build
+          if-no-files-found: error
+      - uses: actions/upload-pages-artifact@v3
+        if: github.event_name == 'push' && vars.GROUPTABS_SYNC_URL != ''
+        with:
+          path: build
+
+  deploy:
+    if: github.event_name == 'push' && vars.GROUPTABS_SYNC_URL != ''
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
+      - uses: actions/deploy-pages@v4
+        id: deployment
