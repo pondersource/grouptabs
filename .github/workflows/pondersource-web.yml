@@ -1,6 +1,8 @@
 name: Ponder Source Grouptabs web build
 
 on:
+  push:
+    branches: [develop]
   pull_request:
     branches: [develop]
   workflow_dispatch:
@@ -43,3 +45,23 @@ jobs:
           name: grouptabs-web
           path: build
           if-no-files-found: error
+      - uses: actions/upload-pages-artifact@v3
+        if: github.event_name == 'push' && vars.GROUPTABS_SYNC_URL != ''
+        with:
+          path: build
+
+  deploy:
+    if: github.event_name == 'push' && vars.GROUPTABS_SYNC_URL != ''
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
+      - uses: actions/deploy-pages@v4
+        id: deployment
