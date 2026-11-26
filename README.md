@@ -45,6 +45,13 @@ See the section about [deployment](https://facebook.github.io/create-react-app/d
 
 Environment variable `REACT_APP_BACKEND_URL` (default "http://localhost:5984").
 
+For the Ponder Source web build, set the GitHub Actions repository variable
+`GROUPTABS_SYNC_URL` to the public HTTPS URL of the Ponder Source CouchDB
+gateway, without a trailing slash. The value is bundled in the frontend and must
+be a URL without credentials. The gateway must accept the deployed app origin
+and support replication to the per-tab database paths. Verify creating and
+opening a tab from two browser profiles before publishing the app.
+
 ## License
 
 Grouptabs is licensed under [GPL v3 or any later version](<https://tldrlegal.com/license/gnu-general-public-license-v3-(gpl-3)>). Basically you are free to use, modify, share and improve it for any purpose, as long as you include the original changes and also publish any changes you make under the same license. Contributions are very welcome! :)
